@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-logo">CT</span>
+      <span class="sidebar-title">Contacts</span>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="#" class="nav-link active" data-view="dashboard">Dashboard</a></li>
+      <li><a href="#" class="nav-link" data-view="contacts">All Contacts</a></li>
+      <li><a href="#" class="nav-link" data-view="settings">Settings</a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button class="btn-primary full-width" id="btn-add-contact">+ Add Contact</button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- DASHBOARD VIEW -->
+    <section class="view active" id="view-dashboard">
+      <header class="view-header">
+        <h1>Dashboard</h1>
+        <p class="view-subtitle" id="dashboard-date"></p>
+      </header>
+
+      <div class="dashboard-bands">
+        <div class="band band--overdue">
+          <h2 class="band-title">Overdue <span class="band-count" id="count-overdue"></span></h2>
+          <div class="card-grid" id="grid-overdue">
+            <p class="empty-state">No overdue contacts.</p>
+          </div>
+        </div>
+        <div class="band band--due">
+          <h2 class="band-title">Due in the next 14 days <span class="band-count" id="count-due"></span></h2>
+          <div class="card-grid" id="grid-due">
+            <p class="empty-state">No contacts due soon.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ALL CONTACTS VIEW -->
+    <section class="view" id="view-contacts">
+      <header class="view-header">
+        <h1>All Contacts</h1>
+        <div class="view-controls">
+          <input type="text" class="search-input" id="search-contacts" placeholder="Search contacts…" />
+          <select class="filter-select" id="filter-category">
+            <option value="">All categories</option>
+          </select>
+          <select class="filter-select" id="filter-frequency">
+            <option value="">All frequencies</option>
+            <option value="weekly">Weekly</option>
+            <option value="fortnightly">Fortnightly</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="annually">Annually</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+      </header>
+      <div class="contact-table-wrap">
+        <table class="contact-table" id="contact-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Category</th>
+              <th>Frequency</th>
+              <th>Last Contact</th>
+              <th>Next Due</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="contact-table-body"></tbody>
+        </table>
+        <p class="empty-state" id="contacts-empty">No contacts yet. Add your first one.</p>
+      </div>
+    </section>
+
+    <!-- SETTINGS VIEW -->
+    <section class="view" id="view-settings">
+      <header class="view-header">
+        <h1>Settings</h1>
+      </header>
+      <div class="settings-grid">
+
+        <div class="settings-card">
+          <h3>GitHub Sync</h3>
+          <p class="settings-desc">Your contacts are stored in a private GitHub repository. Fill in the details below once and they will be saved in your browser.</p>
+          <label>GitHub Personal Access Token
+            <input type="password" id="setting-gh-token" placeholder="ghp_…" />
+          </label>
+          <label>Data Repository (owner/repo)
+            <input type="text" id="setting-gh-repo" placeholder="yourusername/contact-tracker-data" />
+          </label>
+          <button class="btn-primary" id="btn-save-github">Save & test connection</button>
+          <p class="settings-status" id="github-status"></p>
+        </div>
+
+        <div class="settings-card">
+          <h3>Google Calendar</h3>
+          <p class="settings-desc">Connect your Google account to create and manage contact reminder events automatically.</p>
+          <label>Google OAuth Client ID
+            <input type="text" id="setting-gcal-client-id" placeholder="YOUR_CLIENT_ID.apps.googleusercontent.com" />
+          </label>
+          <button class="btn-primary" id="btn-gcal-auth">Connect Google Account</button>
+          <p class="settings-status" id="gcal-status"></p>
+          <div id="gcal-calendar-select-wrap" style="display:none">
+            <label>Calendar to use
+              <select id="setting-gcal-calendar"></select>
+            </label>
+            <button class="btn-secondary" id="btn-save-gcal-calendar">Save calendar choice</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h3>Categories</h3>
+          <p class="settings-desc">Manage contact categories. Custom ones you add here are available on all contacts.</p>
+          <div id="category-list" class="tag-list"></div>
+          <div class="inline-add">
+            <input type="text" id="new-category-input" placeholder="New category name…" />
+            <button class="btn-secondary" id="btn-add-category">Add</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CONTACT DETAIL MODAL -->
+  <div class="modal-overlay" id="modal-contact" role="dialog" aria-modal="true">
+    <div class="modal modal--wide">
+      <button class="modal-close" id="btn-close-contact">&times;</button>
+      <div class="modal-body" id="modal-contact-body">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT CONTACT MODAL -->
+  <div class="modal-overlay" id="modal-edit" role="dialog" aria-modal="true">
+    <div class="modal">
+      <button class="modal-close" id="btn-close-edit">&times;</button>
+      <h2 id="edit-modal-title">Add Contact</h2>
+      <form id="contact-form" novalidate>
+        <input type="hidden" id="edit-contact-id" />
+
+        <label>Name <span class="required">*</span>
+          <input type="text" id="edit-name" required />
+        </label>
+        <label>Company
+          <input type="text" id="edit-company" />
+        </label>
+        <label>How we met
+          <input type="text" id="edit-how-met" placeholder="eg, university, conference 2023…" />
+        </label>
+        <label>Category <span class="required">*</span>
+          <select id="edit-category" required></select>
+        </label>
+        <label>Contact frequency <span class="required">*</span>
+          <select id="edit-frequency" required>
+            <option value="weekly">Weekly</option>
+            <option value="fortnightly">Fortnightly</option>
+            <option value="monthly" selected>Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="annually">Annually</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </label>
+        <label id="custom-freq-wrap" style="display:none">Custom frequency (days)
+          <input type="number" id="edit-custom-days" min="1" max="365" placeholder="eg, 45" />
+        </label>
+        <label>Profile notes
+          <textarea id="edit-notes" rows="4" placeholder="Background, interests, things to remember…"></textarea>
+        </label>
+        <label>Last contacted
+          <input type="date" id="edit-last-contacted" />
+        </label>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" id="btn-cancel-edit">Cancel</button>
+          <button type="submit" class="btn-primary">Save contact</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- LOG INTERACTION MODAL -->
+  <div class="modal-overlay" id="modal-log" role="dialog" aria-modal="true">
+    <div class="modal">
+      <button class="modal-close" id="btn-close-log">&times;</button>
+      <h2>Log interaction</h2>
+      <form id="log-form" novalidate>
+        <input type="hidden" id="log-contact-id" />
+        <label>Date <span class="required">*</span>
+          <input type="date" id="log-date" required />
+        </label>
+        <label>Medium
+          <select id="log-medium">
+            <option value="call">Call</option>
+            <option value="coffee">Coffee / in person</option>
+            <option value="email">Email</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="video">Video call</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label>Summary
+          <textarea id="log-summary" rows="4" placeholder="What did you discuss? Any follow-ups?"></textarea>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="log-reset-timer" checked />
+          Reset next-due timer from this date
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" id="btn-cancel-log">Cancel</button>
+          <button type="submit" class="btn-primary">Save interaction</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CONFIRM DELETE MODAL -->
+  <div class="modal-overlay" id="modal-confirm" role="dialog" aria-modal="true">
+    <div class="modal modal--narrow">
+      <h2>Delete contact?</h2>
+      <p id="confirm-message">This will permanently remove this contact and all their interaction history.</p>
+      <div class="form-actions">
+        <button class="btn-secondary" id="btn-confirm-cancel">Cancel</button>
+        <button class="btn-danger" id="btn-confirm-ok">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/github-sync.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
