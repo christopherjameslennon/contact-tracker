@@ -1,0 +1,45 @@
+# daily-sync.yml
+# Runs every morning at 08:00 UTC.
+# Reads contacts.json from the data repo, works out who is due,
+# and creates/updates/deletes Google Calendar events accordingly.
+#
+# Required GitHub Actions secrets (set in the app repo → Settings → Secrets):
+#   GH_DATA_TOKEN      — personal access token with repo scope (same one used in the app)
+#   GH_DATA_REPO       — owner/repo of your data repository, eg yourname/contact-tracker-data
+#   GCAL_CLIENT_ID     — Google OAuth client ID
+#   GCAL_CLIENT_SECRET — Google OAuth client secret
+#   GCAL_REFRESH_TOKEN — long-lived refresh token (obtained during setup)
+#   GCAL_CALENDAR_ID   — ID of the calendar to write events to (eg primary or the full calendar ID)
+
+name: Daily contact sync
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # 08:00 UTC daily
+  workflow_dispatch:        # allow manual trigger from GitHub Actions UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out app repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install node-fetch@3
+
+      - name: Run sync script
+        env:
+          GH_DATA_TOKEN:      ${{ secrets.GH_DATA_TOKEN }}
+          GH_DATA_REPO:       ${{ secrets.GH_DATA_REPO }}
+          GCAL_CLIENT_ID:     ${{ secrets.GCAL_CLIENT_ID }}
+          GCAL_CLIENT_SECRET: ${{ secrets.GCAL_CLIENT_SECRET }}
+          GCAL_REFRESH_TOKEN: ${{ secrets.GCAL_REFRESH_TOKEN }}
+          GCAL_CALENDAR_ID:   ${{ secrets.GCAL_CALENDAR_ID }}
+        run: node .github/workflows/sync-script.mjs
