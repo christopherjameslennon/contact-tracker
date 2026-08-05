@@ -897,6 +897,19 @@ textarea { resize: vertical; }
     overflow: hidden;
   }
 
+  /* Constrain filters row to viewport */
+  #view-contacts .view-controls {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  #view-contacts .search-input,
+  #view-contacts .filter-select {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
   .contact-table-wrap {
     border-radius: 0;
     border-left: none;
