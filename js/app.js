@@ -855,27 +855,12 @@ function bindSettings() {
 
     try {
       await GCalendar.authorise();
-      status.textContent = 'Authenticated. Loading your calendars…'; status.className = 'settings-status ok';
-
-      const calendars = await GCalendar.listCalendars();
-      const sel = document.getElementById('setting-gcal-calendar');
-      sel.innerHTML = calendars.map(cal =>
-        `<option value="${esc(cal.id)}"${cal.id === (GCalendar.getConfig().calendarId || '') ? ' selected' : ''}>${esc(cal.name)}</option>`
-      ).join('');
-      document.getElementById('gcal-calendar-select-wrap').style.display = '';
+      status.textContent = 'Connected. Calendar reminders are active.';
+      status.className = 'settings-status ok';
+      hideReconnectBanner();
     } catch (e) {
       status.textContent = 'Auth failed: ' + e.message; status.className = 'settings-status err';
     }
-  });
-
-  // Save calendar choice
-  document.getElementById('btn-save-gcal-calendar').addEventListener('click', () => {
-    const calId = document.getElementById('setting-gcal-calendar').value;
-    const cfg   = GCalendar.getConfig();
-    cfg.calendarId = calId;
-    GCalendar.saveConfig(cfg);
-    document.getElementById('gcal-status').textContent = 'Calendar saved.';
-    document.getElementById('gcal-status').className   = 'settings-status ok';
   });
 
   // Add category

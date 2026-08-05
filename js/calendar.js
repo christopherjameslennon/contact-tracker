@@ -16,10 +16,11 @@
 
 const GCalendar = (() => {
 
-  const SCOPES  = 'https://www.googleapis.com/auth/calendar.events';
-  const API     = 'https://www.googleapis.com/calendar/v3';
-  const GAPI    = 'https://accounts.google.com/o/oauth2/v2/auth';
-  const CLIENT_ID = '807399165696-ssf3cp6b7r1m20g83jlhiad1c6g0oi7p.apps.googleusercontent.com';
+  const SCOPES      = 'https://www.googleapis.com/auth/calendar.events';
+  const API         = 'https://www.googleapis.com/calendar/v3';
+  const GAPI        = 'https://accounts.google.com/o/oauth2/v2/auth';
+  const CLIENT_ID   = '807399165696-ssf3cp6b7r1m20g83jlhiad1c6g0oi7p.apps.googleusercontent.com';
+  const CALENDAR_ID = '9b30c7488eb9f609160dbd5a2176dc9d0948bc462d8f176a9d6575c343febb21@group.calendar.google.com';
 
   // ── Config ──────────────────────────────────────────────
 
@@ -50,8 +51,7 @@ const GCalendar = (() => {
   }
 
   function isConfigured() {
-    const c = getConfig();
-    return !!(c.calendarId);
+    return true; // CALENDAR_ID is hardcoded — always configured
   }
 
   // ── OAuth implicit flow ──────────────────────────────────
@@ -64,6 +64,7 @@ const GCalendar = (() => {
       response_type: 'token',
       scope:         SCOPES,
       include_granted_scopes: 'true',
+      prompt:        'consent',
     });
     return `${GAPI}?${params.toString()}`;
   }
@@ -190,17 +191,17 @@ const GCalendar = (() => {
   // ── Create or update event ───────────────────────────────
 
   async function upsertEvent(contact) {
-    if (!isConfigured() || !tokenValid()) return contact;
+    if (!tokenValid()) return contact;
 
-    const { calendarId } = getConfig();
-    const eventBody      = buildEventBody(contact);
+    const calId    = encodeURIComponent(CALENDAR_ID);
+    const eventBody = buildEventBody(contact);
 
     try {
       if (contact.calendarEventId) {
         // Update existing event
         await apiCall(
           'PUT',
-          `/calendars/${encodeURIComponent(calendarId)}/events/${contact.calendarEventId}`,
+          `/calendars/${encodeURIComponent(CALENDAR_ID)}/events/${contact.calendarEventId}`,
           eventBody
         );
         return contact; // eventId unchanged
@@ -208,7 +209,7 @@ const GCalendar = (() => {
         // Create new event
         const res = await apiCall(
           'POST',
-          `/calendars/${encodeURIComponent(calendarId)}/events`,
+          `/calendars/${encodeURIComponent(CALENDAR_ID)}/events`,
           eventBody
         );
         return { ...contact, calendarEventId: res.id };
@@ -222,12 +223,11 @@ const GCalendar = (() => {
   // ── Delete event ─────────────────────────────────────────
 
   async function deleteEvent(contact) {
-    if (!contact.calendarEventId || !isConfigured() || !tokenValid()) return;
-    const { calendarId } = getConfig();
+    if (!contact.calendarEventId || !tokenValid()) return;
     try {
       await apiCall(
         'DELETE',
-        `/calendars/${encodeURIComponent(calendarId)}/events/${contact.calendarEventId}`
+        `/calendars/${encodeURIComponent(CALENDAR_ID)}/events/${contact.calendarEventId}`
       );
     } catch (e) {
       console.warn('Calendar delete failed:', e.message);
