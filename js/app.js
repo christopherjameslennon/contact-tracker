@@ -25,6 +25,7 @@ async function init() {
   bindLogForm();
   bindConfirmModal();
   bindSearch();
+  bindImport();
   renderAll();
 }
 
@@ -61,6 +62,7 @@ async function persistData() {
 // ── Navigation ────────────────────────────────────────────────────────────────
 
 function bindNav() {
+  // Desktop sidebar
   document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
@@ -68,7 +70,37 @@ function bindNav() {
       showView(view);
       document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
       link.classList.add('active');
+      syncMobileNav(view);
     });
+  });
+
+  // Mobile bottom nav — view buttons
+  document.querySelectorAll('.mobile-nav-item[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const view = btn.dataset.view;
+      showView(view);
+      syncMobileNav(view);
+      // Also sync desktop sidebar highlight
+      document.querySelectorAll('.nav-link').forEach(l => {
+        l.classList.toggle('active', l.dataset.view === view);
+      });
+    });
+  });
+
+  // Mobile add button
+  const mobileAdd = document.getElementById('mobile-add-btn');
+  if (mobileAdd) mobileAdd.addEventListener('click', () => openEditModal(null));
+
+  // Mobile import button
+  const mobileImport = document.getElementById('mobile-import-btn');
+  if (mobileImport) mobileImport.addEventListener('click', () => {
+    document.getElementById('csv-file-input').click();
+  });
+}
+
+function syncMobileNav(activeView) {
+  document.querySelectorAll('.mobile-nav-item[data-view]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === activeView);
   });
 }
 
@@ -255,6 +287,152 @@ function bindSearch() {
   document.getElementById('filter-frequency').addEventListener('change', renderContactTable);
 }
 
+// ── CSV Import ────────────────────────────────────────────────────────────────
+
+function bindImport() {
+  document.getElementById('btn-import-csv').addEventListener('click', () => {
+    document.getElementById('csv-file-input').click();
+  });
+
+  document.getElementById('csv-file-input').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    e.target.value = ''; // reset so same file can be re-uploaded
+    importCSV(text);
+  });
+}
+
+function parseCSVLine(line) {
+  const cols = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      cols.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  cols.push(current.trim());
+  return cols;
+}
+
+function importCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) {
+    showToast('CSV file is empty or has no data rows.', 'error');
+    return;
+  }
+
+  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_'));
+  const validFreqs = ['weekly', 'fortnightly', 'monthly', 'quarterly', 'annually', 'custom'];
+
+  let imported = 0;
+  let skipped  = 0;
+  const skippedNames = [];
+  const errors = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cols = parseCSVLine(lines[i]);
+    const row  = {};
+    headers.forEach((h, idx) => { row[h] = (cols[idx] || '').trim(); });
+
+    const name = row['name'];
+    if (!name) { errors.push(`Row ${i + 1}: no name, skipped.`); continue; }
+
+    // Duplicate check
+    const exists = state.contacts.find(
+      c => c.name.trim().toLowerCase() === name.toLowerCase()
+    );
+    if (exists) {
+      skipped++;
+      skippedNames.push(name);
+      continue;
+    }
+
+    // Validate / default frequency
+    let freq = (row['frequency'] || 'monthly').toLowerCase();
+    if (!validFreqs.includes(freq)) freq = 'monthly';
+
+    const contact = {
+      id:            uid(),
+      name,
+      company:       row['company']       || '',
+      howMet:        row['how_met']        || '',
+      category:      row['category']       || 'Other',
+      frequency:     freq,
+      customDays:    freq === 'custom' ? (row['custom_days'] || '30') : null,
+      notes:         row['notes']          || '',
+      lastContacted: row['last_contacted'] || null,
+      interactions:  [],
+      calendarEventId: null,
+      createdAt:     new Date().toISOString(),
+      updatedAt:     new Date().toISOString(),
+    };
+
+    state.contacts.push(contact);
+    imported++;
+  }
+
+  // Show import result modal
+  showImportResult({ imported, skipped, skippedNames, errors });
+
+  if (imported > 0) {
+    // Queue calendar events in background — don't block UI
+    syncImportedCalendarEvents();
+    scheduleSave();
+    renderAll();
+  }
+}
+
+async function syncImportedCalendarEvents() {
+  // Process contacts that have no calendarEventId yet
+  const unsynced = state.contacts.filter(c => !c.calendarEventId);
+  for (const contact of unsynced) {
+    const idx = state.contacts.findIndex(c => c.id === contact.id);
+    if (idx === -1) continue;
+    state.contacts[idx] = await GCalendar.upsertEvent(contact);
+  }
+  scheduleSave();
+}
+
+function showImportResult({ imported, skipped, skippedNames, errors }) {
+  let msg = `Import complete. ${imported} contact${imported !== 1 ? 's' : ''} added.`;
+  if (skipped > 0) {
+    msg += ` ${skipped} skipped (already exist): ${skippedNames.join(', ')}.`;
+  }
+  if (errors.length > 0) {
+    msg += ` ${errors.length} error${errors.length !== 1 ? 's' : ''}: ${errors.join(' ')}`;
+  }
+  const type = imported > 0 ? 'ok' : 'error';
+
+  // Use a longer-lived toast for import results
+  let toast = document.getElementById('ct-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'ct-toast';
+    toast.style.cssText = `
+      position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999;
+      padding:.65rem 1.1rem; border-radius:6px; font-size:.85rem;
+      font-family:var(--font-body); box-shadow:0 4px 12px rgba(0,0,0,.15);
+      transition:opacity .3s; max-width:400px; line-height:1.5;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.background = type === 'error' ? 'var(--red)' : 'var(--text)';
+  toast.style.color       = '#fff';
+  toast.style.opacity     = '1';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 8000);
+}
+
 // ── Contact detail modal ──────────────────────────────────────────────────────
 
 function openContactDetail(id) {
@@ -422,6 +600,17 @@ function bindContactForm() {
     };
 
     if (!contact.name) { alert('Name is required.'); return; }
+
+    // Duplicate check — only for new contacts, not edits
+    if (!existing) {
+      const duplicate = state.contacts.find(
+        c => c.name.trim().toLowerCase() === contact.name.toLowerCase()
+      );
+      if (duplicate) {
+        showToast(`${contact.name} already exists as a contact.`, 'error');
+        return;
+      }
+    }
 
     // Calendar sync
     contact = await GCalendar.upsertEvent(contact);
