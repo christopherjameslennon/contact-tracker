@@ -51,7 +51,7 @@ const GCalendar = (() => {
 
   function isConfigured() {
     const c = getConfig();
-    return !!(c.clientId && c.calendarId);
+    return !!(c.calendarId);
   }
 
   // ── OAuth implicit flow ──────────────────────────────────
