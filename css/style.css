@@ -99,6 +99,7 @@ h3 { font-size: .95rem; font-weight: 600; }
   border-radius: var(--radius);
   flex-shrink: 0;
   display: block;
+  object-fit: cover;
 }
 
 .sidebar-title {
@@ -279,10 +280,13 @@ h3 { font-size: .95rem; font-weight: 600; }
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .contact-table {
   width: 100%;
+  min-width: 600px; /* prevents collapse on mobile — triggers horizontal scroll instead */
   border-collapse: collapse;
   font-size: .85rem;
 }
@@ -298,7 +302,21 @@ h3 { font-size: .95rem; font-weight: 600; }
   color: var(--text-3);
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
+  user-select: none;
 }
+
+.contact-table th.sortable {
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+
+.contact-table th.sortable:hover {
+  color: var(--text);
+  background: var(--border);
+}
+
+.contact-table th.sort-asc::after  { content: ' ↑'; color: var(--accent); }
+.contact-table th.sort-desc::after { content: ' ↓'; color: var(--accent); }
 
 .contact-table td {
   padding: .75rem 1rem;
@@ -819,16 +837,7 @@ textarea { resize: vertical; }
     grid-template-columns: 1fr;
   }
 
-  /* Contact table — hide less important columns */
-  .contact-table th:nth-child(3),
-  .contact-table td:nth-child(3),
-  .contact-table th:nth-child(4),
-  .contact-table td:nth-child(4),
-  .contact-table th:nth-child(5),
-  .contact-table td:nth-child(5) {
-    display: none;
-  }
-
+  /* Contact table scrolls horizontally — no columns hidden */
   .row-actions { opacity: 1; } /* always visible on mobile */
 
   /* Detail modal full-screen */
