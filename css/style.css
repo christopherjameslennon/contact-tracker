@@ -722,6 +722,57 @@ textarea { resize: vertical; }
 }
 
 /* =============================================
+   RECONNECT BANNER
+   ============================================= */
+.reconnect-banner {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  background: var(--amber-light);
+  border: 1px solid var(--amber-mid);
+  border-radius: var(--radius);
+  padding: .6rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: .825rem;
+}
+
+.reconnect-msg {
+  flex: 1;
+  color: var(--amber);
+  font-weight: 500;
+}
+
+.reconnect-btn {
+  font-family: var(--font-body);
+  font-size: .8rem;
+  font-weight: 500;
+  padding: .3rem .75rem;
+  background: var(--amber);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition);
+}
+
+.reconnect-btn:hover { background: var(--amber); filter: brightness(.9); }
+
+.reconnect-dismiss {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--amber);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 .2rem;
+  opacity: .7;
+  transition: opacity var(--transition);
+}
+
+.reconnect-dismiss:hover { opacity: 1; }
+
+/* =============================================
    CATEGORY COLOUR HELPERS
    (applied inline via JS as CSS vars)
    ============================================= */
@@ -839,6 +890,19 @@ textarea { resize: vertical; }
 
   /* Contact table scrolls horizontally — no columns hidden */
   .row-actions { opacity: 1; } /* always visible on mobile */
+
+  /* Prevent the table from blowing out the page width */
+  #view-contacts {
+    max-width: 100vw;
+    overflow: hidden;
+  }
+
+  .contact-table-wrap {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    margin: 0 -1rem; /* bleed to edges, looks intentional */
+  }
 
   /* Detail modal full-screen */
   .modal-overlay {
