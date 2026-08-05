@@ -12,6 +12,7 @@ let state = {
 };
 
 let saveTimeout = null;
+let sortState = { col: 'name', dir: 'asc' };
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,7 @@ async function init() {
   bindConfirmModal();
   bindSearch();
   bindImport();
+  bindTableSort();
   renderAll();
 }
 
@@ -223,14 +225,41 @@ function renderContactTable() {
   catSelect.innerHTML = '<option value="">All categories</option>' +
     state.categories.map(c => `<option value="${esc(c)}"${c === prevCat ? ' selected' : ''}>${esc(c)}</option>`).join('');
 
+  // Sort
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (sortState.col === 'name') {
+      av = a.name.toLowerCase(); bv = b.name.toLowerCase();
+    } else if (sortState.col === 'category') {
+      av = (a.category || '').toLowerCase(); bv = (b.category || '').toLowerCase();
+    } else if (sortState.col === 'frequency') {
+      av = GCalendar.frequencyToDays(a.frequency, a.customDays);
+      bv = GCalendar.frequencyToDays(b.frequency, b.customDays);
+    } else if (sortState.col === 'lastContacted') {
+      av = a.lastContacted || '0000-00-00'; bv = b.lastContacted || '0000-00-00';
+    } else if (sortState.col === 'nextDue') {
+      av = GCalendar.getNextDueDate(a).getTime();
+      bv = GCalendar.getNextDueDate(b).getTime();
+    } else if (sortState.col === 'status') {
+      const diffA = Math.round((GCalendar.getNextDueDate(a) - today) / 86400000);
+      const diffB = Math.round((GCalendar.getNextDueDate(b) - today) / 86400000);
+      av = diffA; bv = diffB;
+    }
+    if (av < bv) return sortState.dir === 'asc' ? -1 : 1;
+    if (av > bv) return sortState.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   if (!filtered.length) {
     tbody.innerHTML = '';
     empty.style.display = 'block';
+    // Still update headers
+    updateSortHeaders();
     return;
   }
   empty.style.display = 'none';
-
-  const today = new Date(); today.setHours(0,0,0,0);
 
   tbody.innerHTML = filtered.map(c => {
     const next    = GCalendar.getNextDueDate(c);
@@ -265,7 +294,7 @@ function renderContactTable() {
 
   tbody.querySelectorAll('tr').forEach(row => {
     row.addEventListener('click', e => {
-      if (e.target.closest('[data-action]')) return; // handled below
+      if (e.target.closest('[data-action]')) return;
       openContactDetail(row.dataset.id);
     });
   });
@@ -277,6 +306,32 @@ function renderContactTable() {
       if (action === 'log')    openLogModal(id);
       if (action === 'edit')   openEditModal(id);
       if (action === 'delete') confirmDelete(id);
+    });
+  });
+
+  updateSortHeaders();
+}
+
+function updateSortHeaders() {
+  document.querySelectorAll('#contact-table th.sortable').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.col === sortState.col) {
+      th.classList.add(sortState.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+function bindTableSort() {
+  document.querySelectorAll('#contact-table th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (sortState.col === col) {
+        sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortState.col = col;
+        sortState.dir = 'asc';
+      }
+      renderContactTable();
     });
   });
 }
