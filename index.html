@@ -37,6 +37,15 @@
   <!-- MAIN CONTENT -->
   <main class="main">
 
+    <!-- GOOGLE RECONNECT BANNER -->
+    <div id="gcal-reconnect-banner" style="display:none">
+      <div class="reconnect-banner">
+        <span class="reconnect-msg">Google Calendar disconnected</span>
+        <button class="reconnect-btn" id="btn-reconnect-gcal">Reconnect</button>
+        <button class="reconnect-dismiss" id="btn-dismiss-reconnect" title="Dismiss">&times;</button>
+      </div>
+    </div>
+
     <!-- DASHBOARD VIEW -->
     <section class="view active" id="view-dashboard">
       <header class="view-header">
@@ -122,9 +131,6 @@
         <div class="settings-card">
           <h3>Google Calendar</h3>
           <p class="settings-desc">Connect your Google account to create and manage contact reminder events automatically.</p>
-          <label>Google OAuth Client ID
-            <input type="text" id="setting-gcal-client-id" placeholder="YOUR_CLIENT_ID.apps.googleusercontent.com" />
-          </label>
           <button class="btn-primary" id="btn-gcal-auth">Connect Google Account</button>
           <p class="settings-status" id="gcal-status"></p>
           <div id="gcal-calendar-select-wrap" style="display:none">
