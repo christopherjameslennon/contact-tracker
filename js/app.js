@@ -28,6 +28,8 @@ async function init() {
   bindSearch();
   bindImport();
   bindTableSort();
+  bindReconnectBanner();
+  checkCalendarToken();
   renderAll();
 }
 
@@ -58,6 +60,51 @@ async function persistData() {
     });
   } catch (e) {
     showToast('Save failed: ' + e.message, 'error');
+  }
+}
+
+// ── Google reconnect banner ───────────────────────────────────────────────────
+
+function checkCalendarToken() {
+  const cfg = GCalendar.getConfig();
+  // Only show banner if calendar has been set up but token has expired
+  if (cfg.calendarId && !GCalendar.tokenValid()) {
+    showReconnectBanner();
+  }
+}
+
+function showReconnectBanner() {
+  const banner = document.getElementById('gcal-reconnect-banner');
+  if (banner) banner.style.display = '';
+}
+
+function hideReconnectBanner() {
+  const banner = document.getElementById('gcal-reconnect-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function bindReconnectBanner() {
+  const reconnectBtn = document.getElementById('btn-reconnect-gcal');
+  const dismissBtn   = document.getElementById('btn-dismiss-reconnect');
+
+  if (reconnectBtn) {
+    reconnectBtn.addEventListener('click', async () => {
+      reconnectBtn.textContent = 'Connecting…';
+      reconnectBtn.disabled = true;
+      try {
+        await GCalendar.authorise();
+        hideReconnectBanner();
+        showToast('Google Calendar reconnected.');
+      } catch (e) {
+        reconnectBtn.textContent = 'Reconnect';
+        reconnectBtn.disabled = false;
+        showToast('Reconnect failed: ' + e.message, 'error');
+      }
+    });
+  }
+
+  if (dismissBtn) {
+    dismissBtn.addEventListener('click', hideReconnectBanner);
   }
 }
 
@@ -773,14 +820,9 @@ function bindConfirmModal() {
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 function renderSettings() {
-  // Pre-fill saved settings
   const ghCfg   = GitHubSync.getConfig();
-  const gcalCfg = GCalendar.getConfig();
-
   if (ghCfg.token) document.getElementById('setting-gh-token').value = ghCfg.token;
   if (ghCfg.repo)  document.getElementById('setting-gh-repo').value  = ghCfg.repo;
-  if (gcalCfg.clientId) document.getElementById('setting-gcal-client-id').value = gcalCfg.clientId;
-
   renderCategoryList();
 }
 
@@ -808,19 +850,11 @@ function bindSettings() {
 
   // Google Calendar auth
   document.getElementById('btn-gcal-auth').addEventListener('click', async () => {
-    const clientId = document.getElementById('setting-gcal-client-id').value.trim();
-    const status   = document.getElementById('gcal-status');
-
-    if (!clientId) { status.textContent = 'Enter your Google Client ID first.'; status.className = 'settings-status err'; return; }
-
-    const cfg = GCalendar.getConfig();
-    cfg.clientId = clientId;
-    GCalendar.saveConfig(cfg);
-
+    const status = document.getElementById('gcal-status');
     status.textContent = 'Opening Google sign-in…'; status.className = 'settings-status';
 
     try {
-      await GCalendar.authorise(clientId);
+      await GCalendar.authorise();
       status.textContent = 'Authenticated. Loading your calendars…'; status.className = 'settings-status ok';
 
       const calendars = await GCalendar.listCalendars();

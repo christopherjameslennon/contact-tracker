@@ -19,6 +19,7 @@ const GCalendar = (() => {
   const SCOPES  = 'https://www.googleapis.com/auth/calendar.events';
   const API     = 'https://www.googleapis.com/calendar/v3';
   const GAPI    = 'https://accounts.google.com/o/oauth2/v2/auth';
+  const CLIENT_ID = '807399165696-ssf3cp6b7r1m20g83jlhiad1c6g0oi7p.apps.googleusercontent.com';
 
   // ── Config ──────────────────────────────────────────────
 
@@ -55,10 +56,10 @@ const GCalendar = (() => {
 
   // ── OAuth implicit flow ──────────────────────────────────
 
-  function buildAuthUrl(clientId) {
+  function buildAuthUrl() {
     const redirect = window.location.origin + window.location.pathname;
     const params   = new URLSearchParams({
-      client_id:     clientId,
+      client_id:     CLIENT_ID,
       redirect_uri:  redirect,
       response_type: 'token',
       scope:         SCOPES,
@@ -71,9 +72,9 @@ const GCalendar = (() => {
    * Opens the OAuth popup. Returns a Promise that resolves with the access token
    * or rejects on failure/cancel.
    */
-  function authorise(clientId) {
+  function authorise() {
     return new Promise((resolve, reject) => {
-      const url    = buildAuthUrl(clientId);
+      const url    = buildAuthUrl();
       const popup  = window.open(url, 'gcal_auth', 'width=520,height=620,resizable=yes');
 
       if (!popup) {
